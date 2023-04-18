@@ -25,14 +25,15 @@ class LiveStreamInference():
         self.transforms = transforms
 
     def update(self, barrier, scale, thread_name):
-        # Read the next frame from the stream
-        if self.capture.isOpened():
-            (self.status, self.frame) = self.capture.read()
-            dim = (int(self.frame_width * scale), int(self.frame_height * scale))
-            self.frame = cv2.resize(self.frame, dim)
-            self.run_inference()
-            print(f"Thread {thread_name} done")
-            barrier.wait()  
+        while True:
+            # Read the next frame from the stream
+            if self.capture.isOpened():
+                (self.status, self.frame) = self.capture.read()
+                dim = (int(self.frame_width * scale), int(self.frame_height * scale))
+                self.frame = cv2.resize(self.frame, dim)
+                self.run_inference()
+                print(f"Thread {thread_name} done")
+                barrier.wait()  
 
     def run_inference(self):
         self.frame = np.moveaxis(self.frame, -1, 0)
@@ -61,13 +62,13 @@ def parallel_inference(rtsp_stream_link):
     model_mbnet = model_mbnet.eval()
     video_stream_widget_mbnet = LiveStreamInference(src=rtsp_stream_link, model=model_mbnet, transforms=transforms_mbnet)
     
-    while True:
-        # Start the thread to read frames from the video stream
-        barrier = Barrier(2 + 1)
-        thread1 = Thread(target=video_stream_widget_resnet.update, args=(barrier, 0.7, "RN50"))
-        thread2 = Thread(target=video_stream_widget_mbnet.update, args=(barrier, 0.7, "MBNETV3"))
-        thread1.start()
-        thread2.start()
+    # Start the thread to read frames from the video stream
+    barrier = Barrier(2 + 1, timeout=5)
+    thread1 = Thread(target=video_stream_widget_resnet.update, args=(barrier, 0.7, "RN50"))
+    thread2 = Thread(target=video_stream_widget_mbnet.update, args=(barrier, 0.7, "MBNETV3"))
+    thread1.start()
+    thread2.start()
+    while True:     
 
         barrier.wait()
         result_stack = np.hstack((video_stream_widget_resnet.inference_result,
