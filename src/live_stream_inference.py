@@ -15,7 +15,6 @@ class LiveStreamInference():
         # Default resolutions of the frame are obtained (system dependent)
         self.frame_width = int(self.capture.get(3))
         self.frame_height = int(self.capture.get(4))
-        print(self.frame_height, self.frame_width)
 
         # Start the thread to read frames from the video stream
         self.status = False
